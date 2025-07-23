@@ -3,6 +3,7 @@ nxtscape/first-run-nxtscape.patch
 # features
 nxtscape/add-importer-supporter-for-chrome.patch
 nxtscape/nxtscape-settings-ui.patch
+nxtscape/add-version-display.patch
 
 # chromium
 nxtscape/disable-user-gesture-restriction-on-sidepanel.patch
@@ -20,6 +21,10 @@ nxtscape/new-snapshot-API.patch
 # updater
 nxtscape/nxtscape-updater-sparkle.patch
 nxtscape/add-sparkle-info-plist-keys.patch
+
+# ui updates  
+nxtscape/UI-updating-About-string.patch
+nxtscape/enhance-about-page-version.patch
 
 # new views
 nxtscape/adding-new-vector-icons.patch

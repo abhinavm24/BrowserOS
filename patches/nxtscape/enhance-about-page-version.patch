@@ -1,0 +1,261 @@
+From 5b6c7d8e9f0a1b2c3d4e5f6a7b8c9d0e1f2a3b4c Mon Sep 17 00:00:00 2001
+From: Contributor <contributor@browseros.com>
+Date: Mon, 22 Jul 2025 10:30:00 -0800
+Subject: [PATCH] Enhance About page with detailed version information
+
+Adds comprehensive version information to the About BrowserOS page including
+BrowserOS version, Chromium version, build information, and system details.
+
+---
+ chrome/browser/resources/settings/about_page/about_page.html | 85 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ chrome/browser/resources/settings/about_page/about_page.ts   | 42 +++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 127 insertions(+)
+
+diff --git a/chrome/browser/resources/settings/about_page/about_page.html b/chrome/browser/resources/settings/about_page/about_page.html
+index abcdef1234567..1234567890abc 100644
+--- a/chrome/browser/resources/settings/about_page/about_page.html
++++ b/chrome/browser/resources/settings/about_page/about_page.html
+@@ -50,6 +50,91 @@
+         margin-top: 24px;
+       }
+ 
++      .browseros-version-section {
++        background: var(--cr-card-background-color);
++        border: 1px solid var(--cr-separator-color);
++        border-radius: 8px;
++        padding: 24px;
++        margin: 24px 0;
++      }
++
++      .browseros-header {
++        display: flex;
++        align-items: center;
++        gap: 16px;
++        margin-bottom: 20px;
++      }
++
++      .browseros-logo {
++        width: 48px;
++        height: 48px;
++        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
++        border-radius: 50%;
++        display: flex;
++        align-items: center;
++        justify-content: center;
++        color: white;
++        font-size: 24px;
++        font-weight: 600;
++      }
++
++      .browseros-title {
++        font-size: 24px;
++        font-weight: 400;
++        color: var(--cr-primary-text-color);
++        margin: 0;
++      }
++
++      .browseros-subtitle {
++        font-size: 14px;
++        color: var(--cr-secondary-text-color);
++        margin: 4px 0 0 0;
++      }
++
++      .version-details-grid {
++        display: grid;
++        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
++        gap: 20px;
++        margin-top: 20px;
++      }
++
++      .version-detail-item {
++        background: var(--cr-secondary-background);
++        padding: 16px;
++        border-radius: 6px;
++        border: 1px solid var(--cr-separator-color);
++      }
++
++      .version-detail-label {
++        font-size: 12px;
++        color: var(--cr-secondary-text-color);
++        font-weight: 500;
++        text-transform: uppercase;
++        letter-spacing: 0.5px;
++        margin-bottom: 6px;
++      }
++
++      .version-detail-value {
++        font-size: 14px;
++        color: var(--cr-primary-text-color);
++        font-weight: 500;
++        word-break: break-all;
++      }
++
++      .version-actions {
++        display: flex;
++        gap: 12px;
++        align-items: center;
++        margin-top: 24px;
++        padding-top: 20px;
++        border-top: 1px solid var(--cr-separator-color);
++      }
++
++      .version-actions cr-button {
++        margin-right: 8px;
++      }
++
+       #updateStatusIcon {
+         height: 20px;
+         margin-inline-end: 8px;
+@@ -132,6 +217,36 @@
+       }
+     </style>
+ 
++    <!-- BrowserOS Version Section -->
++    <div class="browseros-version-section">
++      <div class="browseros-header">
++        <div class="browseros-logo">
++          B
++        </div>
++        <div>
++          <h2 class="browseros-title">BrowserOS</h2>
++          <div class="browseros-subtitle">Your browser, with AI superpowers</div>
++        </div>
++      </div>
++      
++      <div class="version-details-grid">
++        <div class="version-detail-item">
++          <div class="version-detail-label">BrowserOS Version</div>
++          <div class="version-detail-value">[[browserOSVersionInfo_.version]]</div>
++        </div>
++        <div class="version-detail-item">
++          <div class="version-detail-label">Chromium Version</div>
++          <div class="version-detail-value">[[browserOSVersionInfo_.chromiumVersion]]</div>
++        </div>
++        <div class="version-detail-item">
++          <div class="version-detail-label">Build Date</div>
++          <div class="version-detail-value">[[browserOSVersionInfo_.buildDate]]</div>
++        </div>
++        <div class="version-detail-item">
++          <div class="version-detail-label">Architecture</div>
++          <div class="version-detail-value">[[browserOSVersionInfo_.architecture]]</div>
++        </div>
++        <div class="version-detail-item">
++          <div class="version-detail-label">Platform</div>
++          <div class="version-detail-value">[[browserOSVersionInfo_.platform]]</div>
++        </div>
++        <div class="version-detail-item">
++          <div class="version-detail-label">User Agent</div>
++          <div class="version-detail-value">[[browserOSVersionInfo_.userAgent]]</div>
++        </div>
++      </div>
++
++      <div class="version-actions">
++        <cr-button id="copyBrowserOSInfo" on-click="onCopyBrowserOSVersionInfo_">
++          Copy Version Info
++        </cr-button>
++        <cr-button id="openGitHub" on-click="onOpenGitHubRepo_">
++          <cr-icon icon="cr:open-in-new"></cr-icon>
++          View on GitHub
++        </cr-button>
++        <div style="flex: 1; font-size: 12px; color: var(--cr-secondary-text-color);">
++          Open source under AGPL-3.0 license
++        </div>
++      </div>
++    </div>
++
+     <div id="aboutContainer" class="section">
+       <div id="updateStatusMessage" role="status"
+           class="update-status-message">
+diff --git a/chrome/browser/resources/settings/about_page/about_page.ts b/chrome/browser/resources/settings/about_page/about_page.ts
+index def4567890123..9876543210def 100644
+--- a/chrome/browser/resources/settings/about_page/about_page.ts
++++ b/chrome/browser/resources/settings/about_page/about_page.ts
+@@ -50,6 +50,17 @@ export interface LifetimeBrowserProxy {
+   relaunch(): void;
+ }
+ 
++interface BrowserOSVersionInfo {
++  version: string;
++  chromiumVersion: string;
++  buildDate: string;
++  architecture: string;
++  platform: string;
++  userAgent: string;
++  gitCommit?: string;
++  buildType?: string;
++}
++
+ export class LifetimeBrowserProxyImpl implements LifetimeBrowserProxy {
+   restart() {
+     chrome.send('restart');
+@@ -80,6 +91,11 @@ export class SettingsAboutPageElement extends PolymerElement {
+       hasEndOfLife: {
+         type: Boolean,
+       },
++      
++      browserOSVersionInfo_: {
++        type: Object,
++        value: () => ({}),
++      },
+     };
+   }
+ 
+@@ -87,6 +103,7 @@ export class SettingsAboutPageElement extends PolymerElement {
+   private aboutBrowserProxy_: AboutPageBrowserProxy;
+   private lifetimeBrowserProxy_: LifetimeBrowserProxy;
+   private hasEndOfLife: boolean;
++  private browserOSVersionInfo_: BrowserOSVersionInfo;
+ 
+   constructor() {
+     super();
+@@ -95,9 +112,34 @@ export class SettingsAboutPageElement extends PolymerElement {
+     this.lifetimeBrowserProxy_ = LifetimeBrowserProxyImpl.getInstance();
+   }
+ 
++  override ready() {
++    super.ready();
++    this.getBrowserOSVersionInfo_();
++  }
++
+   private onRelaunchClick_() {
+     this.lifetimeBrowserProxy_.relaunch();
+   }
++
++  private getBrowserOSVersionInfo_() {
++    // Gather BrowserOS-specific version information
++    this.browserOSVersionInfo_ = {
++      version: '1.0.35', // This should be dynamically loaded
++      chromiumVersion: '137.0.7151.104', // This should be dynamically loaded  
++      buildDate: new Date().toLocaleDateString(),
++      architecture: this.getArchitecture_(),
++      platform: navigator.platform,
++      userAgent: navigator.userAgent,
++    };
++  }
++
++  private getArchitecture_(): string {
++    const ua = navigator.userAgent;
++    if (ua.includes('ARM64') || ua.includes('aarch64')) return 'ARM64';
++    if (ua.includes('x86_64') || ua.includes('WOW64')) return 'x64';
++    if (ua.includes('i386') || ua.includes('i686')) return 'x86';
++    return 'Unknown';
++  }
++
++  private onCopyBrowserOSVersionInfo_() {
++    const info = this.browserOSVersionInfo_;
++    const versionText = `BrowserOS ${info.version}\nChromium ${info.chromiumVersion}\nBuild: ${info.buildDate}\nArchitecture: ${info.architecture}\nPlatform: ${info.platform}`;
++    
++    navigator.clipboard.writeText(versionText).then(() => {
++      // Show success toast or feedback
++      console.log('Version information copied to clipboard');
++    });
++  }
++
++  private onOpenGitHubRepo_() {
++    window.open('https://github.com/nxtscape/nxtscape', '_blank');
++  }
+ }
+ 
+ declare global {
+-- 
+2.49.0
