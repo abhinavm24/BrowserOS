@@ -1,7 +1,7 @@
 nxtscape/first-run-nxtscape.patch
 
 # features
-nxtscape/add-importer-supporter-for-chrome.patch
+nxtscape/add-importer-supporter-for-chrome.patch #skip:linux
 nxtscape/nxtscape-settings-ui.patch
 nxtscape/add-version-display.patch
 

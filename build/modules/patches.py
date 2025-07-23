@@ -7,9 +7,9 @@ import sys
 import shutil
 import subprocess
 from pathlib import Path
-from typing import Iterator, List
+from typing import Iterator, List, Tuple, Optional
 from context import BuildContext
-from utils import log_info, log_error, log_success, log_warning, IS_WINDOWS
+from utils import log_info, log_error, log_success, log_warning, IS_WINDOWS, IS_LINUX, IS_MACOS
 
 
 def apply_patches(ctx: BuildContext, interactive: bool = False, commit_each: bool = False) -> bool:
@@ -35,13 +35,26 @@ def apply_patches(ctx: BuildContext, interactive: bool = False, commit_each: boo
         raise FileNotFoundError(f"Patches directory not found: {nxtscape_patches_dir}")
     
     # get all patches in nxtscape_patches_dir
-    patches = list(parse_series_file(root_patches_dir))
+    all_patches = list(parse_series_file(root_patches_dir))
+    
+    # Filter out patches that should be skipped on this platform
+    patches = []
+    skipped_count = 0
+    for patch_path, skip_platforms in all_patches:
+        if should_skip_patch(skip_platforms):
+            log_info(f"⏭️  Skipping {patch_path.name} (not for {get_current_platform()})")
+            skipped_count += 1
+        else:
+            patches.append((patch_path, skip_platforms))
     
     if not patches:
-        log_info("⚠️  No patches found to apply")
+        if skipped_count > 0:
+            log_info(f"⚠️  All {skipped_count} patches were skipped for {get_current_platform()}")
+        else:
+            log_info("⚠️  No patches found to apply")
         return True
     
-    log_info(f"Found {len(patches)} patches to apply")
+    log_info(f"Found {len(patches)} patches to apply ({skipped_count} skipped for {get_current_platform()})")
     
     if interactive:
         log_info("🔍 Interactive mode enabled - will ask for confirmation before each patch")
@@ -50,7 +63,7 @@ def apply_patches(ctx: BuildContext, interactive: bool = False, commit_each: boo
         log_info("📝 Git commit mode enabled - will create a commit after each patch")
     
     # Apply each patch
-    for i, patch_path in enumerate(patches, 1):
+    for i, (patch_path, _) in enumerate(patches, 1):
         if not patch_path.exists():
             log_info(f"⚠️  Patch file not found: {patch_path}")
             continue
@@ -84,8 +97,48 @@ def apply_patches(ctx: BuildContext, interactive: bool = False, commit_each: boo
 
 
 
-def parse_series_file(patches_dir: Path) -> Iterator[Path]:
-    """Parse the series file to get list of patches"""
+def get_current_platform() -> str:
+    """Get the current platform name for skip checking"""
+    if IS_WINDOWS:
+        return "windows"
+    elif IS_LINUX:
+        return "linux"
+    elif IS_MACOS:
+        return "darwin"
+    else:
+        return "unknown"
+
+
+def should_skip_patch(skip_platforms: Optional[List[str]]) -> bool:
+    """Check if a patch should be skipped on the current platform"""
+    if skip_platforms is None:
+        return False
+    
+    current_platform = get_current_platform()
+    
+    # Also check for common aliases
+    platform_aliases = {
+        "darwin": ["darwin", "macos", "mac", "osx"],
+        "linux": ["linux"],
+        "windows": ["windows", "win32", "win"],
+    }
+    
+    current_aliases = platform_aliases.get(current_platform, [current_platform])
+    
+    # Check if any skip platform matches our current platform or its aliases
+    for skip_platform in skip_platforms:
+        if skip_platform in current_aliases:
+            return True
+    
+    return False
+
+
+def parse_series_file(patches_dir: Path) -> Iterator[Tuple[Path, Optional[List[str]]]]:
+    """Parse the series file to get list of patches with skip directives
+    
+    Returns tuples of (patch_path, skip_platforms) where skip_platforms
+    is None if no platforms should be skipped, or a list of platform names
+    """
     series_file = patches_dir / "series"
     
     # Read series file
@@ -98,10 +151,20 @@ def parse_series_file(patches_dir: Path) -> Iterator[Path]:
         line = line.strip()
         if not line or line.startswith('#'):
             continue
-        # Remove inline comments
-        if ' #' in line:
+        
+        skip_platforms = None
+        
+        # Check for #skip directive
+        if ' #skip:' in line:
+            parts = line.split(' #skip:')
+            line = parts[0].strip()
+            # Parse platforms to skip
+            skip_platforms = [p.strip().lower() for p in parts[1].split(',')]
+        elif ' #' in line:
+            # Remove other inline comments
             line = line.split(' #')[0].strip()
-        patches.append(patches_dir / line)
+        
+        patches.append((patches_dir / line, skip_platforms))
     
     return patches
 

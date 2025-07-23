@@ -113,7 +113,7 @@ def commit_resource_copy(name: str, source: str, destination: str, chromium_src:
             return False
         
         # Create commit message
-        commit_message = f"resource: {name.to_lower()}"
+        commit_message = f"resource: {name.lower()}"
         
         # Create the commit
         cmd_commit = ['git', 'commit', '-m', commit_message]
