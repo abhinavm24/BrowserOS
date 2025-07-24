@@ -22,6 +22,7 @@ from modules.resources import copy_resources
 from modules.chromium_replace import replace_chromium_files, add_file_to_replacements
 from modules.string_replaces import apply_string_replacements
 from modules.inject import inject_version
+from modules.version_injector import inject_version_info
 from modules.configure import configure
 from modules.compile import build
 from modules.gcs import upload_package_artifacts, upload_signed_artifacts
@@ -239,6 +240,9 @@ def build_main(
             if apply_patches_flag and arch_name == architectures[0]:
                 # Inject version into manifest files
                 inject_version(ctx)
+
+                # Inject version information into UI components
+                inject_version_info(ctx)
 
                 # First do chromium file replacements
                 replace_chromium_files(ctx)

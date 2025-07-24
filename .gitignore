@@ -7,3 +7,13 @@
 **/__pycache__/**
 nxtscape-cli-access.json
 gclient.json
+
+# Python environment files
+.python-version
+pyproject.toml
+uv.lock
+main.py
+
+# Patch testing artifacts
+patches/**/*.backup
+patches/**/*-fixed.patch

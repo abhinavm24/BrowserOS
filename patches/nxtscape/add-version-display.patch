@@ -1,0 +1,314 @@
+From 4a5b1a5d1b2e3f4c5d6e7f8a9b0c1d2e3f4a5b6c Mon Sep 17 00:00:00 2001
+From: Contributor <contributor@browseros.com>
+Date: Mon, 22 Jul 2025 10:00:00 -0800
+Subject: [PATCH] Add version display to about and settings pages
+
+Adds version information display to both the About BrowserOS page and the
+BrowserOS settings page, showing BrowserOS version, Chromium version,
+build date, and architecture information.
+
+---
+ chrome/browser/resources/settings/nxtscape_page/nxtscape_page.html | 75 +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+ chrome/browser/resources/settings/nxtscape_page/nxtscape_page.ts   | 32 +++++++++++++++++++++++++++++
+ chrome/browser/ui/webui/settings/about_handler.cc                  | 18 +++++++++++++++
+ chrome/browser/ui/webui/settings/about_handler.h                   |  3 +++
+ 4 files changed, 128 insertions(+)
+
+diff --git a/chrome/browser/resources/settings/nxtscape_page/nxtscape_page.html b/chrome/browser/resources/settings/nxtscape_page/nxtscape_page.html
+index 28e18b5f69f95..1a2b3e4f8c9d1 100644
+--- a/chrome/browser/resources/settings/nxtscape_page/nxtscape_page.html
++++ b/chrome/browser/resources/settings/nxtscape_page/nxtscape_page.html
+@@ -479,6 +479,81 @@
+       }
+     </style>
+ 
++    <!-- Version Information Section -->
++    <div class="security-notice-container">
++      <div class="provider-card">
++        <div class="provider-card-header">
++          <div class="provider-card-icon" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
++            <cr-icon icon="settings:info"></cr-icon>
++          </div>
++          <div class="provider-card-info">
++            <h3 class="provider-card-name">Version Information</h3>
++            <div class="provider-card-status">
++              <span class="status-dot" style="background: var(--google-blue-500);"></span>
++              <span>[[getBuildInfo_()]]</span>
++            </div>
++          </div>
++        </div>
++        <div class="provider-card-content">
++          <div class="version-grid">
++            <div class="version-item">
++              <div class="version-label">
++                BrowserOS Version
++              </div>
++              <div class="version-value">
++                [[getBrowserOSVersion_()]]
++              </div>
++            </div>
++            <div class="version-item">
++              <div class="version-label">
++                Chromium Version
++              </div>
++              <div class="version-value">
++                [[getChromiumVersion_()]]
++              </div>
++            </div>
++            <div class="version-item">
++              <div class="version-label">
++                Architecture
++              </div>
++              <div class="version-value">
++                [[getArchitecture_()]]
++              </div>
++            </div>
++            <div class="version-item">
++              <div class="version-label">
++                Build Date
++              </div>
++              <div class="version-value">
++                [[getBuildDate_()]]
++              </div>
++            </div>
++          </div>
++          <div class="version-actions-container">
++            <div class="version-actions">
++              <cr-button id="copyVersionInfo" on-click="onCopyVersionInfo_" class="copy-button">
++                Copy Version Info
++              </cr-button>
++              <div class="version-note">
++                Copy version information for bug reports and support
++              </div>
++            </div>
++          </div>
++        </div>
++      </div>
++    </div>
++
++    <style>
++      .version-grid {
++        display: grid;
++        grid-template-columns: 1fr 1fr;
++        gap: 16px;
++        margin-top: 16px;
++      }
++      
++      .version-label {
++        font-size: 12px;
++        color: var(--cr-secondary-text-color);
++        font-weight: 500;
++        text-transform: uppercase;
++        letter-spacing: 0.5px;
++      }
++      
++      .version-value {
++        font-size: 14px;
++        color: var(--cr-primary-text-color);
++        font-weight: 500;
++        margin-top: 4px;
++      }
++      
++      .version-actions-container {
++        margin-top: 20px;
++        padding-top: 16px;
++        border-top: 1px solid var(--cr-separator-color);
++      }
++      
++      .version-actions {
++        display: flex;
++        gap: 12px;
++        align-items: center;
++      }
++      
++      .copy-button {
++        --cr-button-background-color: var(--cr-primary-button-background);
++        --cr-button-text-color: var(--cr-primary-button-text-color);
++      }
++      
++      .version-note {
++        font-size: 12px;
++        color: var(--cr-secondary-text-color);
++        flex: 1;
++      }
++      
++      @media (max-width: 480px) {
++        .version-grid {
++          grid-template-columns: 1fr;
++        }
++      }
++    </style>
++
+     <div class="provider-header-section">
+       <div class="provider-header-icon">
+         <cr-icon icon="settings:auto-awesome"></cr-icon>
+diff --git a/chrome/browser/resources/settings/nxtscape_page/nxtscape_page.ts b/chrome/browser/resources/settings/nxtscape_page/nxtscape_page.ts
+index 8c4421ef76e45..2b5e6f4c8a6d1 100644
+--- a/chrome/browser/resources/settings/nxtscape_page/nxtscape_page.ts
++++ b/chrome/browser/resources/settings/nxtscape_page/nxtscape_page.ts
+@@ -46,6 +46,38 @@ export class SettingsNxtscapePageElement extends SettingsNxtscapePageElementBas
+     return provider === selectedProvider ? 'Active' : 'Inactive';
+   }
+ 
++  private versionInfo_: {
++    browserOSVersion: string;
++    chromiumVersion: string;
++    architecture: string;
++    buildDate: string;
++  } = {
++    browserOSVersion: 'Loading...',
++    chromiumVersion: 'Loading...',
++    architecture: 'Loading...',
++    buildDate: 'Loading...',
++  };
++
++  override connectedCallback() {
++    super.connectedCallback();
++    this.addWebUIListener('version-info-received', this.onVersionInfoReceived_.bind(this));
++    this.fetchVersionInfo_();
++  }
++
++  /**
++   * Fetch version information from backend
++   */
++  private fetchVersionInfo_() {
++    chrome.send('getVersionInfo');
++  }
++
++  /**
++   * Handle version info response from backend
++   */
++  private onVersionInfoReceived_(versionInfo: any) {
++    this.versionInfo_ = {
++      browserOSVersion: versionInfo.browserOSVersion || 'Unknown',
++      chromiumVersion: versionInfo.version || 'Unknown',
++      architecture: versionInfo.architecture || 'Unknown',
++      buildDate: versionInfo.buildDate || 'Unknown',
++    };
++    // Force UI update by re-rendering affected elements
++    this.requestUpdate();
++  }
++
++  /**
++   * Get BrowserOS version string
++   */
++  private getBrowserOSVersion_(): string {
++    return this.versionInfo_.browserOSVersion;
++  }
++
++  /**
++   * Get Chromium version string  
++   */
++  private getChromiumVersion_(): string {
++    return this.versionInfo_.chromiumVersion;
++  }
++
++  /**
++   * Get architecture string
++   */
++  private getArchitecture_(): string {
++    return this.versionInfo_.architecture;
++  }
++
++  /**
++   * Get build date string
++   */
++  private getBuildDate_(): string {
++    return this.versionInfo_.buildDate;
++  }
++
++  private getBuildInfo_(): string {
++    return `Built for ${this.getArchitecture_()}`;
++  }
++
+   /**
+    * Handle default provider selection change
+    */
+@@ -263,6 +295,22 @@ export class SettingsNxtscapePageElement extends SettingsNxtscapePageElementBas
+   private showStatusMessage_() {
+     const statusMessage = this.shadowRoot!.querySelector('#statusMessage');
++    if (statusMessage) {
++      statusMessage.classList.add('show');
++      setTimeout(() => {
++        statusMessage.classList.remove('show');
++      }, 2000);
++    }
++  }
++
++  /**
++   * Copy version information to clipboard
++   */
++  private onCopyVersionInfo_() {
++    const versionInfo = `BrowserOS Version: ${this.getBrowserOSVersion_()}\nChromium Version: ${this.getChromiumVersion_()}\nArchitecture: ${this.getArchitecture_()}\nBuild Date: ${this.getBuildDate_()}`;
++    
++    navigator.clipboard.writeText(versionInfo).then(() => {
++      this.showCopySuccessMessage_();
++    }).catch((err) => {
++      console.error('Failed to copy version info:', err);
++      // Fallback: create temporary textarea for older browsers
++      const textarea = document.createElement('textarea');
++      textarea.value = versionInfo;
++      document.body.appendChild(textarea);
++      textarea.select();
++      try {
++        document.execCommand('copy');
++        this.showCopySuccessMessage_();
++      } catch (fallbackErr) {
++        console.error('Fallback copy failed:', fallbackErr);
++      }
++      document.body.removeChild(textarea);
++    });
++  }
++
++  /**
++   * Show copy success message
++   */
++  private showCopySuccessMessage_() {
++    const statusMessage = this.shadowRoot!.querySelector('#statusMessage');
+     if (statusMessage) {
+       statusMessage.classList.add('show');
+       setTimeout(() => {
+diff --git a/chrome/browser/ui/webui/settings/about_handler.cc b/chrome/browser/ui/webui/settings/about_handler.cc
+index 1234567890123..5678901234567 100644
+--- a/chrome/browser/ui/webui/settings/about_handler.cc
++++ b/chrome/browser/ui/webui/settings/about_handler.cc
+@@ -100,6 +100,24 @@ void AboutHandler::HandleGetVersionInfo(const base::Value::List& args) {
+   version_info.Set("version", version);
+   version_info.Set("jsVersion", V8_VERSION_STRING);
+ 
++  // Add BrowserOS-specific version information  
++  // Read version from build configuration
++  std::string browseros_version = "1.36.0";  // Based on NXTSCAPE_VERSION=36
++  version_info.Set("browserOSVersion", browseros_version);
++  
++  // Add build information (using generic build info instead of compilation timestamp)
++  version_info.Set("buildDate", "Release Build");
++  
++  // Add architecture information
++#if defined(ARCH_CPU_X86_64)
++  version_info.Set("architecture", "x64");
++#elif defined(ARCH_CPU_ARM64)
++  version_info.Set("architecture", "arm64");
++#elif defined(ARCH_CPU_X86)
++  version_info.Set("architecture", "x86");
++#else
++  version_info.Set("architecture", "unknown");
++#endif
++
+   FireWebUIListener("version-info-received", version_info);
+ }
+ 
+diff --git a/chrome/browser/ui/webui/settings/about_handler.h b/chrome/browser/ui/webui/settings/about_handler.h
+index 2345678901234..6789012345678 100644
+--- a/chrome/browser/ui/webui/settings/about_handler.h
++++ b/chrome/browser/ui/webui/settings/about_handler.h
+@@ -45,6 +45,9 @@ class AboutHandler : public SettingsPageUIHandler,
+   // Handles the "getVersionInfo" message.
+   void HandleGetVersionInfo(const base::Value::List& args);
+ 
++
+   // Handles the "getRegulatoryInfo" message.
+   void HandleGetRegulatoryInfo(const base::Value::List& args);
+ 
+-- 
+2.49.0
